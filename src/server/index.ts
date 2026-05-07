@@ -13,8 +13,6 @@ import { teamWatcher } from './services/teamWatcher.js'
 import { cronScheduler } from './services/cronScheduler.js'
 import { handleProxyRequest } from './proxy/handler.js'
 import { ProviderService } from './services/providerService.js'
-import * as path from 'node:path'
-import * as fs from 'node:fs'
 import { handleHahaOAuthCallback } from './api/haha-oauth.js'
 import { handleHahaOpenAIOAuthCallback } from './api/haha-openai-oauth.js'
 import { ensureDesktopCliLauncherInstalled } from './services/desktopCliLauncherService.js'
@@ -230,38 +228,6 @@ export function startServer(port = PORT, host = HOST) {
           { status: 'ok', timestamp: new Date().toISOString() },
           { headers: corsHeaders(origin) },
         )
-      }
-
-      // Serve built desktop frontend as static files
-      const staticDir = path.resolve(import.meta.dir, '../../desktop/dist')
-      if (fs.existsSync(staticDir)) {
-        const servePath = url.pathname === '/' ? '/index.html' : url.pathname
-        const filePath = path.join(staticDir, servePath)
-        const ext = path.extname(servePath)
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          const mime: Record<string, string> = {
-            '.html': 'text/html',
-            '.js': 'application/javascript',
-            '.css': 'text/css',
-            '.png': 'image/png',
-            '.svg': 'image/svg+xml',
-            '.ico': 'image/x-icon',
-            '.woff2': 'font/woff2',
-            '.json': 'application/json',
-          }
-          return new Response(fs.readFileSync(filePath), {
-            headers: { 'Content-Type': mime[ext] || 'application/octet-stream' },
-          })
-        }
-        // SPA fallback: serve index.html for all non-file routes
-        if (!ext) {
-          const indexFile = path.join(staticDir, 'index.html')
-          if (fs.existsSync(indexFile)) {
-            return new Response(fs.readFileSync(indexFile), {
-              headers: { 'Content-Type': 'text/html' },
-            })
-          }
-        }
       }
 
       return new Response('Not Found', { status: 404 })
