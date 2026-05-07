@@ -86,19 +86,7 @@ const activeSessions = new Map<string, ServerWebSocket<WebSocketData>>()
 
 export const handleWebSocket = {
   open(ws: ServerWebSocket<WebSocketData>) {
-    const { sessionId, channel, sdkToken } = ws.data
-
-    if (channel === 'sdk') {
-      if (!conversationService.authorizeSdkConnection(sessionId, sdkToken)) {
-        console.warn(`[WS] Rejected SDK connection for session: ${sessionId}`)
-        ws.close(1008, 'Invalid SDK token')
-        return
-      }
-
-      conversationService.attachSdkConnection(sessionId, ws)
-      console.log(`[WS] SDK connected for session: ${sessionId}`)
-      return
-    }
+    const { sessionId } = ws.data
 
     console.log(`[WS] Client connected for session: ${sessionId}`)
 
@@ -121,12 +109,6 @@ export const handleWebSocket = {
   },
 
   message(ws: ServerWebSocket<WebSocketData>, rawMessage: string | Buffer) {
-    if (ws.data.channel === 'sdk') {
-      const payload = typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
-      conversationService.handleSdkPayload(ws.data.sessionId, payload)
-      return
-    }
-
     try {
       const message = JSON.parse(
         typeof rawMessage === 'string' ? rawMessage : rawMessage.toString()
@@ -183,13 +165,7 @@ export const handleWebSocket = {
   },
 
   close(ws: ServerWebSocket<WebSocketData>, code: number, reason: string) {
-    const { sessionId, channel } = ws.data
-
-    if (channel === 'sdk') {
-      console.log(`[WS] SDK disconnected from session: ${sessionId} (${code}: ${reason})`)
-      conversationService.detachSdkConnection(sessionId)
-      return
-    }
+    const { sessionId } = ws.data
 
     console.log(`[WS] Client disconnected from session: ${sessionId} (${code}: ${reason})`)
     computerUseApprovalService.cancelSession(sessionId)
@@ -520,10 +496,7 @@ async function restartSessionWithPermissionMode(
 
     // Rebuild runtime settings (will pick up the persisted mode)
     const runtimeSettings = await getRuntimeSettings(sessionId)
-    const sdkUrl =
-      `ws://${ws.data.serverHost}:${ws.data.serverPort}/sdk/${sessionId}` +
-      `?token=${encodeURIComponent(crypto.randomUUID())}`
-    await conversationService.startSession(sessionId, workDir, sdkUrl, runtimeSettings)
+    await conversationService.startSession(sessionId, workDir, '', runtimeSettings)
 
     sendMessage(ws, { type: 'status', state: 'idle' })
     console.log(`[WS] Restarted CLI for ${sessionId} with permission mode: ${mode}`)
@@ -564,10 +537,7 @@ async function restartSessionWithRuntimeConfig(
     conversationService.stopSession(sessionId)
 
     const runtimeSettings = await getRuntimeSettings(sessionId)
-    const sdkUrl =
-      `ws://${ws.data.serverHost}:${ws.data.serverPort}/sdk/${sessionId}` +
-      `?token=${encodeURIComponent(crypto.randomUUID())}`
-    await conversationService.startSession(sessionId, workDir, sdkUrl, runtimeSettings)
+    await conversationService.startSession(sessionId, workDir, '', runtimeSettings)
 
     sendMessage(ws, { type: 'status', state: 'idle' })
     console.log(`[WS] Restarted CLI for ${sessionId} with runtime override`)
@@ -840,11 +810,8 @@ async function ensureCliSessionStarted(
     const workDir = await resolveSessionWorkDir(sessionId)
     lastResolvedStartupWorkDirs.set(sessionId, workDir)
     const runtimeSettings = await getRuntimeSettings(sessionId)
-    const sdkUrl =
-      `ws://${ws.data.serverHost}:${ws.data.serverPort}/sdk/${sessionId}` +
-      `?token=${encodeURIComponent(crypto.randomUUID())}`
-    console.log(`[WS] Starting CLI for ${sessionId} due to ${reason}`)
-    await conversationService.startSession(sessionId, workDir, sdkUrl, runtimeSettings)
+    console.log(`[WS] Starting SDK session for ${sessionId} due to ${reason}`)
+    await conversationService.startSession(sessionId, workDir, '', runtimeSettings)
   })()
 
   sessionStartupPromises.set(sessionId, startup)
