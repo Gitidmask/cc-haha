@@ -48,7 +48,8 @@
       }
     },
     "externalBin": [
-      "binaries/claude-sidecar"
+      "binaries/claude-sidecar",
+      "binaries/claude-sdk-cli"
     ],
     "resources": [],
     "icon": [

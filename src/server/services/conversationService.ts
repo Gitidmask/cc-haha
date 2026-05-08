@@ -14,6 +14,28 @@ import { diagnosticsService } from './diagnosticsService.js'
 
 const MAX_CAPTURED_SDK_MESSAGES = 40
 
+/**
+ * Resolve the SDK's native Claude Code CLI binary path.
+ *
+ * The @anthropic-ai/claude-agent-sdk needs a native CLI binary at runtime.
+ * Bun.build --compile bundles JS but not native executables from node_modules,
+ * so build-sidecars.ts copies the appropriate platform binary alongside the
+ * sidecar. This function discovers it from the sidecar's own executable path:
+ *
+ *   sidecar:  .../claude-sidecar-x86_64-pc-windows-msvc.exe
+ *   SDK CLI:  .../claude-sdk-cli-x86_64-pc-windows-msvc.exe
+ */
+function resolveSdkCliPath(): string | undefined {
+  const execPath = process.execPath
+  if (!execPath) return undefined
+
+  const basename = path.basename(execPath)
+  const sdkCliName = basename.replace('sidecar', 'sdk-cli')
+  if (sdkCliName === basename) return undefined
+
+  return path.join(path.dirname(execPath), sdkCliName)
+}
+
 type AttachmentRef = {
   type: 'file' | 'image'
   name?: string
@@ -217,6 +239,12 @@ export class ConversationService {
 
     // Add allowed tools
     sdkOptions.options.tools = { type: 'preset', preset: 'claude_code' }
+
+    // Point the SDK to the bundled native CLI binary (bundled alongside sidecar)
+    const sdkCliPath = resolveSdkCliPath()
+    if (sdkCliPath) {
+      sdkOptions.options.pathToClaudeCodeExecutable = sdkCliPath
+    }
 
     try {
       const gen = query(sdkOptions)

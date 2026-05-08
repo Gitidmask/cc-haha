@@ -1,4 +1,5 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, copyFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 
 const desktopRoot = path.resolve(import.meta.dir, '..')
@@ -37,6 +38,36 @@ await compileExecutable({
 })
 
 console.log(`[build-sidecars] Built desktop sidecar for ${targetTriple} (${bunTarget})`)
+
+// ── Bundle SDK native CLI binary ──────────────────────────────────
+// The @anthropic-ai/claude-agent-sdk's query() needs a native Claude Code
+// CLI binary at runtime. Bun.build --compile bundles JS but not native
+// executables from node_modules, so we copy it alongside the sidecar.
+// Tauri's externalBin handles bundling it into the installer.
+const sdkCliDir: string | undefined = {
+  'x86_64-pc-windows-msvc': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-win32-x64'),
+  'aarch64-pc-windows-msvc': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-win32-arm64'),
+  'x86_64-apple-darwin': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64'),
+  'aarch64-apple-darwin': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64'),
+  'x86_64-unknown-linux-gnu': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-linux-x64'),
+  'aarch64-unknown-linux-gnu': path.join(repoRoot, 'node_modules/@anthropic-ai/claude-agent-sdk-linux-arm64'),
+}[targetTriple]
+
+if (sdkCliDir) {
+  const isWindows = targetTriple.includes('windows')
+  const sdkBinaryName = isWindows ? 'claude.exe' : 'claude'
+  const sdkBinaryPath = path.join(sdkCliDir, sdkBinaryName)
+  const sdkBinaryDest = path.join(binariesDir, `claude-sdk-cli-${targetTriple}${isWindows ? '.exe' : ''}`)
+
+  if (existsSync(sdkBinaryPath)) {
+    await copyFile(sdkBinaryPath, sdkBinaryDest)
+    console.log(`[build-sidecars] Copied SDK CLI binary -> ${sdkBinaryDest}`)
+  } else {
+    console.warn(`[build-sidecars] SDK native binary not found at ${sdkBinaryPath}`)
+  }
+} else {
+  console.warn(`[build-sidecars] No SDK CLI binary mapping for ${targetTriple}`)
+}
 
 async function detectHostTriple() {
   const proc = Bun.spawn(['rustc', '-vV'], {
