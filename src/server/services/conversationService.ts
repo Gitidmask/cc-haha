@@ -92,6 +92,18 @@ export class ConversationService {
     return this.sessions.get(sessionId)?.workDir ?? null
   }
 
+  getSessionInitMessage(sessionId: string): any | null {
+    return this.sessions.get(sessionId)?.initMessage ?? null
+  }
+
+  markSessionDeleted(sessionId: string): void {
+    this.deletedSessions.add(sessionId)
+  }
+
+  unmarkSessionDeleted(sessionId: string): void {
+    this.deletedSessions.delete(sessionId)
+  }
+
   getSessionPermissionMode(sessionId: string): string {
     return this.sessions.get(sessionId)?.permissionMode ?? 'default'
   }
