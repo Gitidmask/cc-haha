@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar'
 import { ContentRouter } from './ContentRouter'
 import { ToastContainer } from '../shared/Toast'
 import { UpdateChecker } from '../shared/UpdateChecker'
+import { PermissionOverlay } from '../chat/PermissionOverlay'
 import { useSettingsStore } from '../../stores/settingsStore'
 import { useUIStore, type SettingsTab } from '../../stores/uiStore'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -108,6 +109,7 @@ export function AppShell() {
       </main>
       <ToastContainer />
       <UpdateChecker />
+      <PermissionOverlay />
     </div>
   )
 }
