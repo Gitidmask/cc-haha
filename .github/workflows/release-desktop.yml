@@ -150,4 +150,4 @@ jobs:
           prerelease: false
           updaterJsonPreferNsis: true
           assetNamePattern: ${{ matrix.asset_name_pattern }}
-          args: ${{ matrix.tauri_args }} --ci --config src-tauri/tauri.release-ci.json
+          args: ${{ matrix.tauri_args }} --ci --config src-tauri/tauri.fork-ci.json
