@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useChatStore } from '../../stores/chatStore'
 import { useTabStore } from '../../stores/tabStore'
 import { useTranslation } from '../../i18n'
@@ -126,7 +127,7 @@ export function PermissionDialog({ requestId, toolName, input, description }: Pr
   const title = getPermissionTitle(toolName, input, t)
   const allowRawToggle = !preview
 
-  return (
+  const card = (
     <div className={`mb-4 overflow-hidden rounded-[var(--radius-lg)] border ${
       isPending
         ? 'border-[var(--color-warning)] bg-[var(--color-surface-container-lowest)]'
@@ -259,4 +260,19 @@ export function PermissionDialog({ requestId, toolName, input, description }: Pr
       )}
     </div>
   )
+
+  // When pending, render as a full-screen modal overlay so the user never misses it
+  if (isPending) {
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative w-full max-w-[600px] mx-4">
+          {card}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
+  return card
 }

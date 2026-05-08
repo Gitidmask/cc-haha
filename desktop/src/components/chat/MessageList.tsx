@@ -545,6 +545,7 @@ export function MessageList({ sessionId, compact = false }: MessageListProps = {
         confirmVariant="danger"
         loading={Boolean(rewindingTurnId)}
       />
+
     </div>
   )
 }
